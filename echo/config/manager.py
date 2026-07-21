@@ -1,4 +1,5 @@
 from __future__ import annotations
+from echo.llm.backends import OpenAIConfig
 
 from pathlib import Path
 
@@ -17,4 +18,13 @@ class ConfigurationManager:
         self.runtime = RuntimeConfig(
             name=runtime["name"],
             version=runtime["version"],
+        )
+
+        llm = runtime_data["llm"]
+
+        self.llm = OpenAIConfig(
+            base_url=llm["base_url"],
+            api_key=llm["api_key"],
+            model=llm["model"],
+            timeout=llm.get("timeout", 60.0),
         )

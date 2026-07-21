@@ -21,6 +21,14 @@ class EchoRuntime:
         self._state = LifecycleState.CREATED
         self._modules: dict[str, EchoModule] = {}
 
+        from .service_registry import ServiceRegistry
+        self._services = ServiceRegistry()
+
+    @property
+    def services(self) -> ServiceRegistry:
+        """Return runtime service registry."""
+        return self._services
+
     @property
     def state(self) -> LifecycleState:
         """Return current runtime state."""
