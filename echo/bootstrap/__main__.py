@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from echo.application.chat.session import ChatSession
 from echo.config.manager import ConfigurationManager
 from echo.llm.backends import create_openai_provider
 from echo.presentation.cli import run_console
 from echo.runtime.runtime import EchoRuntime
+
+from pathlib import Path
+
+from echo.prompt import (
+    PromptBuilder,
+    PromptLoader,
+    PromptService,
+)
 
 
 def main() -> None:
@@ -34,7 +40,22 @@ def main() -> None:
     )
 
     # Chat
-    session = ChatSession(provider)
+
+    loader = PromptLoader(
+        Path("echo/prompt"),
+    )
+
+    builder = PromptBuilder()
+
+    prompt_service = PromptService(
+        loader=loader,
+        builder=builder,
+    )
+
+    session = ChatSession(
+        provider=provider,
+        prompt_service=prompt_service,
+    )
 
     print("=" * 32)
     print(f"  {config.runtime.name}")

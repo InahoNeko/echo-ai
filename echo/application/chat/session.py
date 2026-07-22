@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from echo.llm import ChatMessage, ChatResponse, LLMProvider, Role
 
-
+from echo.prompt import PromptService
+from collections.abc import Iterator
 class ChatSession:
     """
     Represents a single conversation session.
@@ -11,9 +12,31 @@ class ChatSession:
     response generation to an LLMProvider.
     """
 
-    def __init__(self, provider: LLMProvider) -> None:
+    def __init__(
+            self,
+            provider: LLMProvider,
+            prompt_service: PromptService,
+    ) -> None:
         self._provider = provider
+        self._prompt_service = prompt_service
         self._messages: list[ChatMessage] = []
+
+    def _ensure_system_prompt(self) -> None:
+        """
+        Ensure the conversation starts with a system prompt.
+        """
+
+        if self._messages:
+            return
+
+        prompt = self._prompt_service.build_system_prompt()
+
+        self._messages.append(
+            ChatMessage(
+                role=Role.SYSTEM,
+                content=prompt,
+            )
+        )
 
     @property
     def messages(self) -> tuple[ChatMessage, ...]:
@@ -35,6 +58,8 @@ class ChatSession:
             4. return response
         """
 
+        self._ensure_system_prompt()
+
         user = ChatMessage(
             role=Role.USER,
             content=text,
@@ -42,13 +67,49 @@ class ChatSession:
 
         self._messages.append(user)
 
-        response = self._provider.chat(self._messages)
+        response = self._provider.chat(
+            self._messages,
+        )
 
         assistant = ChatMessage(
             role=Role.ASSISTANT,
             content=response.text,
         )
 
-        self._messages.append(assistant)
+        self._messages.append(
+            assistant,
+        )
 
         return response
+
+    def stream(
+            self,
+            text: str,
+    ) -> Iterator[str]:
+        """
+        Stream one assistant response.
+        """
+
+        self._ensure_system_prompt()
+
+        user = ChatMessage(
+            role=Role.USER,
+            content=text,
+        )
+
+        self._messages.append(user)
+
+        chunks: list[str] = []
+
+        for chunk in self._provider.stream_chat(
+                self._messages,
+        ):
+            chunks.append(chunk)
+            yield chunk
+
+        assistant = ChatMessage(
+            role=Role.ASSISTANT,
+            content="".join(chunks),
+        )
+
+        self._messages.append(assistant)

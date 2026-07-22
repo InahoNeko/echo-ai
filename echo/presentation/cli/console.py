@@ -14,12 +14,11 @@ def run_console(session: ChatSession) -> None:
     print()
 
     while True:
-
         try:
             text = input("You > ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            break
+        except UnicodeDecodeError:
+            print("\n[Input Error] Failed to decode terminal input.")
+            continue
 
         if not text:
             continue
@@ -28,10 +27,15 @@ def run_console(session: ChatSession) -> None:
             break
 
         try:
-            response = session.send(text)
+
+            print()
+            print("景愿 > ", end="", flush=True)
+
+            for chunk in session.stream(text):
+                print(chunk, end="", flush=True)
+
+            print("\n")
 
         except LLMError as exc:
             print(f"\n[LLM ERROR] {exc}\n")
             continue
-
-        print(f"\n景愿 > {response.text}\n")

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Iterator
 
 from echo.llm import (
     ChatMessage,
@@ -57,6 +58,19 @@ class OpenAIProvider(LLMProvider):
 
         return ChatResponse(
             text=text,
+        )
+
+    def stream_chat(
+            self,
+            messages: list[ChatMessage],
+    ) -> Iterator[str]:
+        """
+        Stream chat response.
+        """
+
+        yield from self._client.stream_chat(
+            model=self._config.model,
+            messages=messages,
         )
 
     def close(self) -> None:
