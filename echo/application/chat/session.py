@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-from echo.llm import ChatMessage, ChatResponse, LLMProvider, Role
-
-from echo.prompt import PromptService
 from collections.abc import Iterator
+
+from echo.llm import (
+    ChatMessage,
+    ChatResponse,
+    LLMProvider,
+    Role,
+)
+from echo.memory import MemoryManager
+from echo.prompt import PromptService
+from echo.memory import Summarizer
 class ChatSession:
     """
     Represents a single conversation session.
@@ -16,10 +23,14 @@ class ChatSession:
             self,
             provider: LLMProvider,
             prompt_service: PromptService,
+            memory_manager: MemoryManager,
+            summarizer: Summarizer,
     ) -> None:
         self._provider = provider
         self._prompt_service = prompt_service
         self._messages: list[ChatMessage] = []
+        self._memory = memory_manager
+        self._summarizer = summarizer
 
     def _ensure_system_prompt(self) -> None:
         """
@@ -67,8 +78,12 @@ class ChatSession:
 
         self._messages.append(user)
 
-        response = self._provider.chat(
+        messages = self._memory.build_messages(
             self._messages,
+        )
+
+        response = self._provider.chat(
+            messages,
         )
 
         assistant = ChatMessage(
@@ -79,6 +94,8 @@ class ChatSession:
         self._messages.append(
             assistant,
         )
+
+        self._refresh_summary()
 
         return response
 
@@ -99,10 +116,14 @@ class ChatSession:
 
         self._messages.append(user)
 
+        messages = self._memory.build_messages(
+            self._messages,
+        )
+
         chunks: list[str] = []
 
         for chunk in self._provider.stream_chat(
-                self._messages,
+                messages,
         ):
             chunks.append(chunk)
             yield chunk
@@ -113,3 +134,20 @@ class ChatSession:
         )
 
         self._messages.append(assistant)
+
+        self._refresh_summary()
+
+    def _should_refresh_summary(self) -> bool:
+        """
+        Decide whether the conversation summary
+        should be refreshed.
+        """
+        return False
+
+    def _refresh_summary(self) -> None:
+        """
+        Refresh conversation summary.
+        """
+
+        if not self._should_refresh_summary():
+            return

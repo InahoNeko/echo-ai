@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+from echo.memory import Summarizer
+from echo.memory import (
+    MemoryManager,
+    MessageWindow,
+    SummaryMemory,
+    ProfileMemory,
+)
+
 from echo.application.chat.session import ChatSession
 from echo.config.manager import ConfigurationManager
 from echo.llm.backends import create_openai_provider
@@ -22,6 +30,8 @@ def main() -> None:
 
     # Runtime
     runtime = EchoRuntime()
+
+
 
     # Configuration
     config = ConfigurationManager(
@@ -47,16 +57,32 @@ def main() -> None:
 
     builder = PromptBuilder()
 
+    summarizer = Summarizer(
+        provider,
+    )
+
     prompt_service = PromptService(
         loader=loader,
         builder=builder,
     )
 
+    memory_manager = MemoryManager(
+        window=MessageWindow(
+            max_messages=20,
+        ),
+        summary=SummaryMemory(),
+        profile=ProfileMemory(),
+    )
+
+
+
+
     session = ChatSession(
         provider=provider,
         prompt_service=prompt_service,
+        memory_manager=memory_manager,
+        summarizer=summarizer,
     )
-
     print("=" * 32)
     print(f"  {config.runtime.name}")
     print("=" * 32)
@@ -75,6 +101,8 @@ def main() -> None:
 
         print()
         print("ECHO Runtime stopped.")
+
+
 
 
 if __name__ == "__main__":
